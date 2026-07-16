@@ -1,0 +1,16 @@
+# Build output
+Debug/
+Release/
+
+# STM32CubeIDE
+.settings/
+*.launch
+
+# OS files
+.DS_Store
+
+# Temporary files
+*.o
+*.d
+*.elf
+*.map

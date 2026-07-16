@@ -1,0 +1,13 @@
+!SESSION 2026-07-16 14:33:28.497 -----------------------------------------------
+eclipse.buildId=Version 2.1.0
+java.version=21.0.9
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=macosx, ARCH=aarch64, WS=cocoa, NL=es_ES
+Framework arguments:  -keyring /Users/radomyrkramskyi/.eclipse_keyring
+Command-line arguments:  -os macosx -ws cocoa -arch aarch64 -keyring /Users/radomyrkramskyi/.eclipse_keyring
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2026-07-16 14:33:36.532
+!MESSAGE Log4j2 initialized with config file /Users/radomyrkramskyi/Desktop/summer-project/rocket-flight-computer/.metadata/.log4j2.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2026-07-16 14:33:38.057
+!MESSAGE Started RMI Server, listening on port 41337
