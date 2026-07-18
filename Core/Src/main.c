@@ -20,6 +20,7 @@
 #include "main.h"
 #include <stdio.h>
 #include <math.h>
+#include "mpu6050.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -100,92 +101,30 @@ int main(void) {
 	MX_USART2_UART_Init();
 	MX_I2C1_Init();
 
-	HAL_StatusTypeDef statusMPU;
 
-	uint8_t data = 0x00;
+	MPU6050_Data imu;
 
-	statusMPU = HAL_I2C_Mem_Write(&hi2c1,
-	                  0x68 << 1,
-	                  0x6B,
-	                  I2C_MEMADD_SIZE_8BIT,
-	                  &data,
-	                  1,
-	                  HAL_MAX_DELAY);
-
-	/* USER CODE BEGIN 2 */
-
-	/* USER CODE END 2 */
-
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
 	HAL_StatusTypeDef status;
-	uint8_t sensor_data[14];
-	int16_t accel_x;
-	int16_t accel_y;
-	int16_t accel_z;
-	int16_t temp;
-	int16_t gyro_x;
-	int16_t gyro_y;
-	int16_t gyro_z;
+	status = MPU6050_Init(&hi2c1);
 
-	float accel_xf;
-	float accel_yf;
-	float accel_zf;
-	float tempf;
-	float gyro_xf;
-	float gyro_yf;
-	float gyro_zf;
+	if(status != HAL_OK) {
+		while(1) {
+			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+			HAL_Delay(200);
+		}
+	}
 
-	float accel_magnitude;
-
+	//main loop
 	while (1) {
-		status = HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x3B,
-		I2C_MEMADD_SIZE_8BIT, sensor_data, 14,
-		HAL_MAX_DELAY);
-
-		if (status == HAL_OK) {
-			accel_x = (sensor_data[0] << 8) | sensor_data[1];
-			accel_y = (sensor_data[2] << 8) | sensor_data[3];
-			accel_z = (sensor_data[4] << 8) | sensor_data[5];
-			temp = (sensor_data[6] << 8) | sensor_data[7];
-			gyro_x = (sensor_data[8] << 8) | sensor_data[9];
-			gyro_y = (sensor_data[10] << 8) | sensor_data[11];
-			gyro_z = (sensor_data[12] << 8) | sensor_data[13];
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-
-			accel_xf = accel_x / 16384.0f;
-			accel_yf = accel_y / 16384.0f;
-			accel_zf = accel_z / 16384.0f;
-			tempf = temp / 340.0f + 36.53f;
-			gyro_xf = gyro_x / 131.0f;
-			gyro_yf = gyro_y / 131.0f;
-			gyro_zf = gyro_z / 131.0f;
-
-			accel_magnitude = sqrtf(accel_xf*accel_xf +
-									accel_yf*accel_yf +
-									accel_zf*accel_zf);
-
-			printf("Acceleration Magnitude: %.2f\r\n", accel_magnitude);
-
-			printf("Raw: X:%6d  Y:%6d  Z:%6d\r\n"
-					"X:%.2f  Y:%.2f  Z:%.2f\r\n\r\n"
-					"Raw: T:%6d\r\n"
-					"T:%.2f\r\n\r\n"
-					"Raw: Xg:%6d  Yg:%6d  Zg:%6d\r\n"
-					"Xg:%.2f  Yg:%.2f  Zg:%.2f\r\n\r\n",
-			       accel_x, accel_y, accel_z,
-				   accel_xf, accel_yf, accel_zf,
-				   temp,
-				   tempf,
-				   gyro_x, gyro_y, gyro_z,
-				   gyro_xf, gyro_yf, gyro_zf);
+		if(MPU6050_Read(&imu) == HAL_OK) {
+			printf("A: %.2f %.2f %.2f\r\n"
+					"G: %.2f %.2f %.2f\r\n"
+					"T: %.2f\r\n\r\n",
+					imu.ax, imu.ay, imu.az,
+					imu.gx, imu.gy, imu.gz,
+					imu.temperature);
 		} else {
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-		}
-
-		if(statusMPU != HAL_OK){
-			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-			HAL_Delay(500);
 		}
 
 		HAL_Delay(500);
