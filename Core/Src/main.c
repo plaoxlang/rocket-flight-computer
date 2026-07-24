@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "mpu6050.h"
+#include "sensor_fusion.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -103,6 +104,10 @@ int main(void) {
 
 
 	MPU6050_Data imu;
+	Attitude attitude;
+	float dt = 0.1; // delay time since last mpu6090 values update
+	uint32_t previous_time = 0;
+	uint32_t current_time;
 
 	HAL_StatusTypeDef status;
 	status = MPU6050_Init(&hi2c1);
@@ -117,17 +122,23 @@ int main(void) {
 	//main loop
 	while (1) {
 		if(MPU6050_Read(&imu) == HAL_OK) {
-			printf("A: %.2f %.2f %.2f\r\n"
-					"G: %.2f %.2f %.2f\r\n"
-					"T: %.2f\r\n\r\n",
-					imu.ax, imu.ay, imu.az,
-					imu.gx, imu.gy, imu.gz,
-					imu.temperature);
+			current_time = HAL_GetTick();
+
+			if(dt > 0.01) {
+				sensorFusion_Update(&imu, dt, &attitude);
+
+				printf("Roll: %.2f\r\n"
+						"Pitch: %.2f\r\n",
+						attitude.roll, attitude.pitch);
+
+				previous_time = current_time;
+			}
+
+			dt = (current_time - previous_time) / SEC_IN_MILISEC;
 		} else {
 			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
 		}
-
-		HAL_Delay(500);
+		HAL_Delay(200);
 	}
 	/* USER CODE END 3 */
 }
