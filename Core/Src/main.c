@@ -112,6 +112,9 @@ int main(void) {
 	HAL_StatusTypeDef status;
 	status = MPU6050_Init(&hi2c1);
 
+	MPU6050_Read(&imu);
+	sensorFusion_Init(&imu, &attitude);
+
 	if(status != HAL_OK) {
 		while(1) {
 			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
@@ -121,24 +124,19 @@ int main(void) {
 
 	//main loop
 	while (1) {
-		if(MPU6050_Read(&imu) == HAL_OK) {
-			current_time = HAL_GetTick();
+		current_time = HAL_GetTick();
+		dt = (current_time - previous_time) / SEC_IN_MILISEC;
 
-			if(dt > 0.01) {
-				sensorFusion_Update(&imu, dt, &attitude);
+		if(dt > 0.01) {
+			MPU6050_Read(&imu);
+			sensorFusion_Update(&imu, dt, &attitude);
 
-				printf("Roll: %.2f\r\n"
-						"Pitch: %.2f\r\n",
-						attitude.roll, attitude.pitch);
+			printf("Roll: %.2f\r\n"
+					"Pitch: %.2f\r\n\r\n",
+					attitude.roll, attitude.pitch);
 
-				previous_time = current_time;
-			}
-
-			dt = (current_time - previous_time) / SEC_IN_MILISEC;
-		} else {
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+			previous_time = current_time;
 		}
-		HAL_Delay(200);
 	}
 	/* USER CODE END 3 */
 }
