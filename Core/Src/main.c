@@ -112,6 +112,11 @@ int main(void) {
 	HAL_StatusTypeDef status;
 	status = MPU6050_Init(&hi2c1);
 
+	do {
+		printf("Calibrating the gyroscope...");
+		status = MPU6050_CalibrateGyro();
+	} while(status != HAL_OK);
+
 	MPU6050_Read(&imu);
 	sensorFusion_Init(&imu, &attitude);
 
@@ -135,8 +140,14 @@ int main(void) {
 					"Pitch: %.2f\r\n\r\n",
 					attitude.roll, attitude.pitch);
 
+			printf("gyrox: %.2f\r\n"
+					"gyroy: %.2f\r\n"
+					"gyroz: %.2f\r\n\r\n",
+					imu.gx, imu.gy, imu.gz);
+
 			previous_time = current_time;
 		}
+		HAL_Delay(300);
 	}
 	/* USER CODE END 3 */
 }

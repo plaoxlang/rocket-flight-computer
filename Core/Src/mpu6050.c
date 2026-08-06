@@ -1,6 +1,7 @@
 #include "mpu6050.h"
 
 static I2C_HandleTypeDef *mpu_i2c;
+static float gx_bias = 0, gy_bias = 0, gz_bias = 0;
 
 // wake the MPU6050 by clearing the sleep bit
 HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c) {
@@ -40,14 +41,41 @@ HAL_StatusTypeDef MPU6050_Read(MPU6050_Data *imu) {
 		imu->ay = accel_y / MPU6050_ACCEL_SCALE;
 		imu->az = accel_z / MPU6050_ACCEL_SCALE;
 
-		imu->gx = gyro_x / MPU6050_GYRO_SCALE;
-		imu->gy = gyro_y / MPU6050_GYRO_SCALE;
-		imu->gz = gyro_z / MPU6050_GYRO_SCALE;
+		imu->gx = gyro_x / MPU6050_GYRO_SCALE - gx_bias;
+		imu->gy = gyro_y / MPU6050_GYRO_SCALE - gy_bias;
+		imu->gz = gyro_z / MPU6050_GYRO_SCALE - gz_bias;
 
 		imu->temperature = temperature / MPU6050_TEMP_SCALE + MPU6050_TEMP_OFFSET;
 	}
 
 	return status;
+}
+
+HAL_StatusTypeDef MPU6050_CalibrateGyro(void) {
+	MPU6050_Data imu;
+	HAL_StatusTypeDef status;
+
+	float valuesXSum = 0;
+	float valuesYSum = 0;
+	float valuesZSum = 0;
+
+	for(int i = 0; i < MPU6050_CALIB_READ; i++) {
+		status = MPU6050_Read(&imu);
+		if(fabsf(imu->gx) > 3 || fabsf(imu->gy) > 3 || fabsf(imu->gz) > 3
+				|| status != HAL_OK) {
+			return HAL_ERROR;
+		}
+
+		valuesXSum += imu->gx;
+		valuesYSum += imu->gy;
+		valuesZSum += imu->gz;
+	}
+
+	gx_bias = valuesXSum / MPU6050_CALIB_READ;
+	gy_bias = valuesYSum / MPU6050_CALIB_READ;
+	gz_bias = valuesZSum / MPU6050_CALIB_READ;
+
+	return HAL_OK;
 }
 
 uint8_t MPU6050_IsConnected(void) {
