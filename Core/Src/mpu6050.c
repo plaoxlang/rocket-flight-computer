@@ -1,4 +1,5 @@
 #include "mpu6050.h"
+#include "math.h"
 
 static I2C_HandleTypeDef *mpu_i2c;
 static float gx_bias = 0, gy_bias = 0, gz_bias = 0;
@@ -58,23 +59,35 @@ HAL_StatusTypeDef MPU6050_CalibrateGyro(void) {
 	float valuesXSum = 0;
 	float valuesYSum = 0;
 	float valuesZSum = 0;
+	int i = 0;
+	int error_counter = 0;
 
-	for(int i = 0; i < MPU6050_CALIB_READ; i++) {
+	for(; i < MPU6050_CALIB_READ; i++) {
 		status = MPU6050_Read(&imu);
-		if(fabsf(imu->gx) > 3 || fabsf(imu->gy) > 3 || fabsf(imu->gz) > 3
-				|| status != HAL_OK) {
+
+		if(error_counter > 9) {
 			return HAL_ERROR;
 		}
 
-		valuesXSum += imu->gx;
-		valuesYSum += imu->gy;
-		valuesZSum += imu->gz;
+		if(status != HAL_OK) {
+			i--;
+			error_counter++;
+		} else if(fabsf(imu.gx) > 3 || fabsf(imu.gy) > 3 || fabsf(imu.gz) > 3) {
+			valuesXSum = 0;
+			valuesYSum = 0;
+			valuesZSum = 0;
+			i = -1;
+			error_counter++;
+		} else {
+			valuesXSum += imu.gx;
+			valuesYSum += imu.gy;
+			valuesZSum += imu.gz;
+		}
 	}
 
 	gx_bias = valuesXSum / MPU6050_CALIB_READ;
 	gy_bias = valuesYSum / MPU6050_CALIB_READ;
 	gz_bias = valuesZSum / MPU6050_CALIB_READ;
-
 	return HAL_OK;
 }
 
