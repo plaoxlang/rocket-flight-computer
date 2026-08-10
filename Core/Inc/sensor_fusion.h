@@ -4,7 +4,7 @@
 #include "mpu6050.h"
 #define SEC_IN_MILISEC 1000.0f
 #define RAD_TO_DEG (180.0f / 3.14159265f)
-#define ALPHA 0.98f
+#define ALPHA 0.97f
 
 typedef struct
 {

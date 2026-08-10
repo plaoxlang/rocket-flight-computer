@@ -115,17 +115,16 @@ int main(void) {
 	if(status != HAL_OK) {
 		while(1) {
 			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-			HAL_Delay(200);
+			HAL_Delay(100);
 		}
 	}
 
-	printf("Calibrating the gyroscope...");
 	status = MPU6050_CalibrateGyro();
 
 	if(status != HAL_OK) {
 		while(1) {
 			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-			HAL_Delay(500);
+			HAL_Delay(2000);
 		}
 	}
 
@@ -149,6 +148,11 @@ int main(void) {
 					"gyroy: %.2f\r\n"
 					"gyroz: %.2f\r\n\r\n",
 					imu.gx, imu.gy, imu.gz);
+
+			printf("accelx: %.2f\r\n"
+					"accely: %.2f\r\n"
+					"accelz: %.2f\r\n\r\n",
+					imu.ax, imu.ay, imu.az);
 
 			previous_time = current_time;
 		}

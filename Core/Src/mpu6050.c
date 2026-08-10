@@ -19,7 +19,7 @@ HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c) {
 }
 
 // read one complete measurement frame from the MPU6050
-HAL_StatusTypeDef MPU6050_Read(MPU6050_Data *imu) {
+HAL_StatusTypeDef MPU6050_ReadRaw(MPU6050_Data *imu) {
 	HAL_StatusTypeDef status;
 	uint8_t sensor_data[MPU6050_DATA_LENGTH];
 
@@ -42,11 +42,26 @@ HAL_StatusTypeDef MPU6050_Read(MPU6050_Data *imu) {
 		imu->ay = accel_y / MPU6050_ACCEL_SCALE;
 		imu->az = accel_z / MPU6050_ACCEL_SCALE;
 
-		imu->gx = gyro_x / MPU6050_GYRO_SCALE - gx_bias;
-		imu->gy = gyro_y / MPU6050_GYRO_SCALE - gy_bias;
-		imu->gz = gyro_z / MPU6050_GYRO_SCALE - gz_bias;
+		imu->gx = gyro_x / MPU6050_GYRO_SCALE;
+		imu->gy = gyro_y / MPU6050_GYRO_SCALE;
+		imu->gz = gyro_z / MPU6050_GYRO_SCALE;
 
 		imu->temperature = temperature / MPU6050_TEMP_SCALE + MPU6050_TEMP_OFFSET;
+	}
+
+	return status;
+}
+
+// apply bias to the gyroscope values
+HAL_StatusTypeDef MPU6050_Read(MPU6050_Data *imu) {
+	HAL_StatusTypeDef status;
+
+	status = MPU6050_ReadRaw(imu);
+
+	if(status == HAL_OK) {
+		imu->gx -= gx_bias;
+		imu->gy -= gy_bias;
+		imu->gz -= gz_bias;
 	}
 
 	return status;
@@ -59,26 +74,35 @@ HAL_StatusTypeDef MPU6050_CalibrateGyro(void) {
 	float valuesXSum = 0;
 	float valuesYSum = 0;
 	float valuesZSum = 0;
+	int read_errors = 0;
+	int motion_errors = 0;
 	int i = 0;
-	int error_counter = 0;
 
 	for(; i < MPU6050_CALIB_READ; i++) {
-		status = MPU6050_Read(&imu);
-
-		if(error_counter > 9) {
-			return HAL_ERROR;
-		}
+		status = MPU6050_ReadRaw(&imu);
 
 		if(status != HAL_OK) {
+			read_errors++;
+			if(read_errors > 9) {
+				return HAL_ERROR;
+			}
 			i--;
-			error_counter++;
 		} else if(fabsf(imu.gx) > 3 || fabsf(imu.gy) > 3 || fabsf(imu.gz) > 3) {
+			motion_errors++;
+
 			valuesXSum = 0;
 			valuesYSum = 0;
 			valuesZSum = 0;
+
 			i = -1;
-			error_counter++;
+
+			if(motion_errors > 9) {
+				return HAL_ERROR;
+			}
 		} else {
+			motion_errors = 0;
+			read_errors = 0;
+
 			valuesXSum += imu.gx;
 			valuesYSum += imu.gy;
 			valuesZSum += imu.gz;
