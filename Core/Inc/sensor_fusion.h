@@ -15,6 +15,6 @@ typedef struct
 void sensorFusion_Init(const MPU6050_Data *imu, Attitude *attitude);
 
 void sensorFusion_Update(const MPU6050_Data *imu,
-		float dt, Attitude *attitude);
+		uint32_t dt, Attitude *attitude);
 
 #endif

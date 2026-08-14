@@ -105,8 +105,8 @@ int main(void) {
 
 	MPU6050_Data imu;
 	Attitude attitude;
-	float dt = 0.1; // delay time since last mpu6090 values update
-	uint32_t previous_time = 0;
+	uint32_t dt_f; // delay time since last mpu6090 values update and fusion
+	uint32_t dt_t; // time interval for telemetry
 	uint32_t current_time;
 
 	HAL_StatusTypeDef status;
@@ -121,6 +121,9 @@ int main(void) {
 
 	status = MPU6050_CalibrateGyro();
 
+	uint32_t previous_fusion_time = 0;
+	uint32_t previous_telemetry_time = 0;
+
 	if(status != HAL_OK) {
 		while(1) {
 			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
@@ -134,29 +137,22 @@ int main(void) {
 	//main loop
 	while (1) {
 		current_time = HAL_GetTick();
-		dt = (current_time - previous_time) / SEC_IN_MILISEC;
+		dt_f = current_time - previous_fusion_time;
+		dt_t = current_time - previous_telemetry_time;
 
-		if(dt > 0.01) {
+		if(dt_f > FUSION_PERIOD) {
 			MPU6050_Read(&imu);
-			sensorFusion_Update(&imu, dt, &attitude);
-
-			printf("Roll: %.2f\r\n"
-					"Pitch: %.2f\r\n\r\n",
-					attitude.roll, attitude.pitch);
-
-			printf("gyrox: %.2f\r\n"
-					"gyroy: %.2f\r\n"
-					"gyroz: %.2f\r\n\r\n",
-					imu.gx, imu.gy, imu.gz);
-
-			printf("accelx: %.2f\r\n"
-					"accely: %.2f\r\n"
-					"accelz: %.2f\r\n\r\n",
-					imu.ax, imu.ay, imu.az);
-
-			previous_time = current_time;
+			sensorFusion_Update(&imu, dt_f, &attitude);
+			previous_fusion_time += FUSION_PERIOD;
 		}
-		HAL_Delay(300);
+
+		if(dt_t > TELEMETRY_PERIOD) {
+			printf("Roll: %.2f\r\n"
+				"Pitch: %.2f\r\n"
+				"dt: %lu\r\n\r\n",
+				attitude.roll, attitude.pitch, dt_t);
+			previous_telemetry_time += TELEMETRY_PERIOD;
+		}
 	}
 	/* USER CODE END 3 */
 }

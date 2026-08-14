@@ -72,6 +72,9 @@ void Error_Handler(void);
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 
+#define TELEMETRY_PERIOD 200
+#define FUSION_PERIOD 10
+
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
