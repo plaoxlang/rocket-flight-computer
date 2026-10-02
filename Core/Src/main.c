@@ -100,8 +100,10 @@ int main(void) {
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_USART2_UART_Init();
+	HAL_I2C_DeInit(&hi2c1);
 	MX_I2C1_Init();
 
+	HAL_Delay(100); // Give the MPU6050 time to power up and become ready before communicating with it.
 
 	MPU6050_Data imu;
 	Attitude attitude;

@@ -124,7 +124,7 @@ uint8_t MPU6050_IsConnected(void) {
 			HAL_MAX_DELAY);
 
 	if(MPUIsON != HAL_OK) {
-		return 0;
+		return MPUIsON;
 	}
 	return (isConnected == MPU6050_WHO_AM_I_VALUE);
 }
