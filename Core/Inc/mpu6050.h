@@ -36,6 +36,6 @@ HAL_StatusTypeDef MPU6050_Read(MPU6050_Data *imu);
 
 HAL_StatusTypeDef MPU6050_CalibrateGyro(void);
 
-uint8_t MPU6050_IsConnected(void);
+HAL_StatusTypeDef MPU6050_Check(void);
 
 #endif

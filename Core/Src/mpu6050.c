@@ -115,16 +115,14 @@ HAL_StatusTypeDef MPU6050_CalibrateGyro(void) {
 	return HAL_OK;
 }
 
-uint8_t MPU6050_IsConnected(void) {
-	uint8_t isConnected;
+HAL_StatusTypeDef MPU6050_Check(void) {
+	uint8_t isConnected = 0;
 	HAL_StatusTypeDef MPUIsON;
 
 	MPUIsON = HAL_I2C_Mem_Read(mpu_i2c, MPU6050_ADDR, MPU6050_WHO_AM_I,
 			I2C_MEMADD_SIZE_8BIT, &isConnected, 1,
-			HAL_MAX_DELAY);
+			50);
 
-	if(MPUIsON != HAL_OK) {
-		return MPUIsON;
-	}
-	return (isConnected == MPU6050_WHO_AM_I_VALUE);
+	if(MPUIsON != HAL_OK) return MPUIsON;
+	return (isConnected == 0x68) ? HAL_OK : HAL_ERROR;
 }
