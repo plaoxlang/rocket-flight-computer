@@ -101,8 +101,9 @@ int main(void) {
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_USART2_UART_Init();
-	I2C_BusRecover(&hi2c1);
+	I2C_BusClear(&hi2c1);
 	MX_I2C1_Init();
+
 	HAL_Delay(100); // Give the MPU6050 time to power up and become ready before communicating with it.
 
 	MPU6050_Data imu;
@@ -112,36 +113,42 @@ int main(void) {
 	uint32_t current_time;
 	uint8_t cont_errors = 0;
 
-	HAL_StatusTypeDef status, recovery_status;
+	HAL_StatusTypeDef status;
+
 	status = MPU6050_Init(&hi2c1);
-	if(status != HAL_OK) {
-		while((recovery_status = I2C_BusRecover(&hi2c1)) != HAL_OK) {
-			MX_I2C1_Init();
-			HAL_Delay(200);
-			if(++cont_errors > 9) {
-				printf("Init/recovery fail, %d", recovery_status);
-				return 1;
-			}
+	while(status != HAL_OK) {
+		I2C_BusClear(&hi2c1);
+		MX_I2C1_Init();
+		HAL_Delay(200);
+		if(++cont_errors > 9) {
+			printf("Init/recovery fail, %d", status);
+			return 1;
 		}
+		status = MPU6050_Init(&hi2c1);
 	}
 
+	cont_errors = 0;
 	status = MPU6050_CalibrateGyro();
 	while(status != HAL_OK) {
-		while(MPU6050_CalibrateGyro() != HAL_OK) {
-			HAL_Delay(1000);
-			if(++cont_errors > 9) {
-				printf("Calibration fail, %d", MPU6050_CalibrateGyro());
-				return 1;
-			}
+		HAL_Delay(1000);
+		if(++cont_errors > 9) {
+			printf("Calibration fail, %d", status);
+			return 1;
 		}
+		status = MPU6050_CalibrateGyro();
 	}
 
-	if(MPU6050_Read(&imu) != HAL_OK) {
-		while(1) {
-			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-			HAL_Delay(500);
+	cont_errors = 0;
+	status = MPU6050_Read(&imu);
+	while(status != HAL_OK) {
+		HAL_Delay(100);
+		if(++cont_errors > 9) {
+			printf("Read fail, %d", status);
 		}
+		status = MPU6050_Read(&imu);
 	}
+	cont_errors = 0;
+
 	sensorFusion_Init(&imu, &attitude);
 
 	uint32_t previous_fusion_time = 0;
@@ -156,20 +163,25 @@ int main(void) {
 
 		if(dt_f > FUSION_PERIOD) {
 			status = MPU6050_Read(&imu);
+
+			if(status != HAL_OK) {
+			printf("MPU lost, recovering");
+				while(status != HAL_OK) {
+					I2C_BusClear(&hi2c1);
+					MX_I2C1_Init();
+					HAL_Delay(200);
+					if(++cont_errors > 9) {
+						printf("Can't recover I2C bus, exiting\r\n");
+						return 1;
+					}
+					status = MPU6050_Read(&imu);
+				}
+			} else {
+				cont_errors = 0;
+			}
+
 			sensorFusion_Update(&imu, dt_f, &attitude);
 			previous_fusion_time += FUSION_PERIOD;
-		}
-
-		if(status != HAL_OK) {
-			printf("MPU lost, recovering");
-			while(I2C_BusRecover(&hi2c1) != HAL_OK) {
-				MX_I2C1_Init();
-				HAL_Delay(200);
-				if(++cont_errors > 9) {
-					printf("Can't recover I2C bus, exiting\r\n");
-					return 1;
-				}
-			}
 		}
 
 		if(dt_t > TELEMETRY_PERIOD) {

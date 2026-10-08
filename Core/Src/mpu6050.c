@@ -76,8 +76,8 @@ HAL_StatusTypeDef MPU6050_CalibrateGyro(void) {
 	float valuesZSum = 0;
 	int read_errors = 0;
 	int motion_errors = 0;
-	int i = 0;
 
+	int i = 0;
 	for(; i < MPU6050_CALIB_READ; i++) {
 		status = MPU6050_ReadRaw(&imu);
 
