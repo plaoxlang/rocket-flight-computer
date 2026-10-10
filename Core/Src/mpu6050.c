@@ -1,5 +1,7 @@
 #include "mpu6050.h"
-#include "math.h"
+#include "i2c_recover.h"
+#include <stdio.h>
+#include <math.h>
 
 static I2C_HandleTypeDef *mpu_i2c;
 static float gx_bias = 0, gy_bias = 0, gz_bias = 0;
@@ -14,6 +16,12 @@ HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c) {
 	statusMPU = HAL_I2C_Mem_Write(mpu_i2c, MPU6050_ADDR, MPU6050_PWR_MGMT_1,
 						I2C_MEMADD_SIZE_8BIT, &data,
 						1, HAL_MAX_DELAY);
+					
+
+	if(statusMPU != HAL_OK) {
+		printf("MPU initialization failed, %d\r\n", statusMPU);
+		I2C_BusClear(mpu_i2c);
+	}
 
 	return statusMPU;
 }

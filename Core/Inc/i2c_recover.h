@@ -1,5 +1,4 @@
 #include "main.h"
-#include "mpu6050.h"
 
 #ifndef INC_I2C_RECOVER_H_
 #define INC_I2C_RECOVER_H_

@@ -111,49 +111,34 @@ int main(void) {
 	uint32_t dt_f; // delay time since last mpu6090 values update and fusion
 	uint32_t dt_t; // time interval for telemetry
 	uint32_t current_time;
-	uint8_t cont_errors = 0;
 
 	HAL_StatusTypeDef status;
-
 	status = MPU6050_Init(&hi2c1);
 	while(status != HAL_OK) {
-		I2C_BusClear(&hi2c1);
 		MX_I2C1_Init();
-		HAL_Delay(200);
-		if(++cont_errors > 9) {
-			printf("Init/recovery fail, %d", status);
-			return 1;
-		}
+		printf("Retrying MPU initialization\r\n");
 		status = MPU6050_Init(&hi2c1);
 	}
 
-	cont_errors = 0;
 	status = MPU6050_CalibrateGyro();
 	while(status != HAL_OK) {
-		HAL_Delay(1000);
-		if(++cont_errors > 9) {
-			printf("Calibration fail, %d", status);
-			return 1;
-		}
+		printf("MPU calibration failed, retrying after 100ms\r\n");
+		HAL_Delay(100);
 		status = MPU6050_CalibrateGyro();
 	}
 
-	cont_errors = 0;
 	status = MPU6050_Read(&imu);
 	while(status != HAL_OK) {
-		HAL_Delay(100);
-		if(++cont_errors > 9) {
-			printf("Read fail, %d", status);
-		}
+		printf("MPU read failed, retrying");
 		status = MPU6050_Read(&imu);
 	}
-	cont_errors = 0;
 
 	sensorFusion_Init(&imu, &attitude);
 
 	uint32_t previous_fusion_time = 0;
 	uint32_t previous_telemetry_time = 0;
 
+	uint8_t cont_errors = 0;
 	//main loop
 	while (1) {
 		cont_errors = 0;
