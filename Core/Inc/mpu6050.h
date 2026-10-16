@@ -2,6 +2,9 @@
 #define INC_MPU6050_H_
 
 #include "main.h"
+#include "i2c_recover.h"
+#include <stdio.h>
+#include <math.h>
 
 #define MPU6050_ADDR (0x68 << 1)
 #define MPU6050_WHO_AM_I 0x75
@@ -18,17 +21,23 @@
 
 typedef struct
 {
-    float ax;
-    float ay;
-    float az;
+    float accel_x_g;
+    float accel_y_g;
+    float accel_z_g;
 
-    float gx;
-    float gy;
-    float gz;
+    float gyro_x_dps;
+    float gyro_y_dps;
+    float gyro_z_dps;
 
-    float temperature;
-
+    float temperature_c;
 } MPU6050_Data;
+
+typedef struct
+{
+	float gx_bias;
+	float gy_bias;
+	float gz_bias;
+} MPU6050_Biases;
 
 HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c);
 

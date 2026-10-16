@@ -4,12 +4,12 @@
 #include "mpu6050.h"
 #define SEC_IN_MILISEC 1000.0f
 #define RAD_TO_DEG (180.0f / 3.14159265f)
-#define ALPHA 0.97f
+#define SENSOR_FUSION_ALPHA 0.97f
 
 typedef struct
 {
-	float roll;
-	float pitch;
+	float roll_deg;
+	float pitch_deg;
 } Attitude;
 
 void sensorFusion_Init(const MPU6050_Data *imu, Attitude *attitude);

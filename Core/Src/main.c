@@ -101,7 +101,6 @@ int main(void) {
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_USART2_UART_Init();
-	I2C_BusClear(&hi2c1);
 	MX_I2C1_Init();
 
 	HAL_Delay(100); // Give the MPU6050 time to power up and become ready before communicating with it.
@@ -116,17 +115,18 @@ int main(void) {
 	status = MPU6050_Init(&hi2c1);
 	while(status != HAL_OK) {
 		MX_I2C1_Init();
-		printf("Retrying MPU initialization\r\n");
+		printf("MPU initialization failed, retrying\r\n");
 		status = MPU6050_Init(&hi2c1);
 	}
 
 	status = MPU6050_CalibrateGyro();
 	while(status != HAL_OK) {
-		printf("MPU calibration failed, retrying after 100ms\r\n");
-		HAL_Delay(100);
+		printf("MPU calibration failed, retrying after 300ms\r\n");
+		HAL_Delay(300);
 		status = MPU6050_CalibrateGyro();
 	}
 
+	// first read for the sensor
 	status = MPU6050_Read(&imu);
 	while(status != HAL_OK) {
 		printf("MPU read failed, retrying");
@@ -135,46 +135,38 @@ int main(void) {
 
 	sensorFusion_Init(&imu, &attitude);
 
-	uint32_t previous_fusion_time = 0;
-	uint32_t previous_telemetry_time = 0;
+	uint32_t previousFusionTime = 0;
+	uint32_t previousTelemetryTime = 0;
 
-	uint8_t cont_errors = 0;
 	//main loop
 	while (1) {
-		cont_errors = 0;
 		current_time = HAL_GetTick();
-		dt_f = current_time - previous_fusion_time;
-		dt_t = current_time - previous_telemetry_time;
+		dt_f = current_time - previousFusionTime;
+		dt_t = current_time - previousTelemetryTime;
 
 		if(dt_f > FUSION_PERIOD) {
 			status = MPU6050_Read(&imu);
 
 			if(status != HAL_OK) {
-			printf("MPU lost, recovering");
-				while(status != HAL_OK) {
-					I2C_BusClear(&hi2c1);
-					MX_I2C1_Init();
-					HAL_Delay(200);
-					if(++cont_errors > 9) {
-						printf("Can't recover I2C bus, exiting\r\n");
-						return 1;
+				printf("MPU lost, recovering");
+					while(status != HAL_OK) {
+						MX_I2C1_Init();
+						HAL_Delay(100);
+						status = MPU6050_Read(&imu);
 					}
-					status = MPU6050_Read(&imu);
-				}
-			} else {
-				cont_errors = 0;
 			}
 
 			sensorFusion_Update(&imu, dt_f, &attitude);
-			previous_fusion_time += FUSION_PERIOD;
+			previousFusionTime += FUSION_PERIOD;
 		}
 
 		if(dt_t > TELEMETRY_PERIOD) {
 			printf("Roll: %.2f\r\n"
 				"Pitch: %.2f\r\n"
 				"dt: %lu\r\n\r\n",
-				attitude.roll, attitude.pitch, dt_t);
-			previous_telemetry_time += TELEMETRY_PERIOD;
+			attitude.roll_deg, attitude.pitch_deg, dt_t);
+
+			previousTelemetryTime += TELEMETRY_PERIOD;
 		}
 	}
 	/* USER CODE END 3 */

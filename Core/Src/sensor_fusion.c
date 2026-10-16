@@ -2,20 +2,20 @@
 #include <math.h>
 
 void sensorFusion_Init(const MPU6050_Data *imu, Attitude *attitude) {
-	attitude->roll = atan2(imu->ay, imu->az) * RAD_TO_DEG;
-	attitude->pitch = atan2(imu->ax, imu->az) * RAD_TO_DEG;
+	attitude->roll_deg = atan2(imu->accel_y_g, imu->accel_z_g) * RAD_TO_DEG;
+	attitude->pitch_deg = atan2(imu->accel_x_g, imu->accel_z_g) * RAD_TO_DEG;
 }
 
 void sensorFusion_Update(const MPU6050_Data *imu,
 		uint32_t dt, Attitude *attitude)
 {
 	float dt_sec = (float)dt / SEC_IN_MILISEC;
-	float gyroRoll = attitude->roll + imu->gx * dt_sec;
-	float gyroPitch = attitude->pitch + imu->gy * dt_sec;
+	float gyroRoll = attitude->roll_deg + imu->gyro_x_dps * dt_sec;
+	float gyroPitch = attitude->pitch_deg + imu->gyro_y_dps * dt_sec;
 
-	float accelRoll = atan2(imu->ay, imu->az) * RAD_TO_DEG;
-	float accelPitch = atan2(-imu->ax, sqrt(imu->ay * imu->ay + imu->az * imu->az)) * RAD_TO_DEG;
+	float accelRoll = atan2(imu->accel_y_g, imu->accel_z_g) * RAD_TO_DEG;
+	float accelPitch = atan2(-imu->accel_x_g, sqrt(imu->accel_y_g * imu->accel_y_g + imu->accel_z_g * imu->accel_z_g)) * RAD_TO_DEG;
 
-	attitude->roll = gyroRoll * ALPHA + accelRoll * (1 - ALPHA);
-	attitude->pitch = gyroPitch * ALPHA + accelPitch * (1 - ALPHA);
+	attitude->roll_deg = gyroRoll * SENSOR_FUSION_ALPHA + accelRoll * (1 - SENSOR_FUSION_ALPHA);
+	attitude->pitch_deg = gyroPitch * SENSOR_FUSION_ALPHA + accelPitch * (1 - SENSOR_FUSION_ALPHA);
 }
