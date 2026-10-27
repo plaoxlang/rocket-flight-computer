@@ -5,7 +5,7 @@
 #define I2C_SDA_PORT GPIOB
 #define I2C_SDA_PIN  GPIO_PIN_9
 
-void I2C_BusClear(I2C_HandleTypeDef *hi2c1)
+HAL_StatusTypeDef I2C_BusClear(I2C_HandleTypeDef *hi2c1)
 {
     HAL_I2C_DeInit(hi2c1);
 
@@ -37,4 +37,6 @@ void I2C_BusClear(I2C_HandleTypeDef *hi2c1)
     HAL_Delay(1);
     HAL_GPIO_WritePin(I2C_SDA_PORT, I2C_SDA_PIN, GPIO_PIN_SET);
     HAL_Delay(1);
+
+    return HAL_OK;
 }

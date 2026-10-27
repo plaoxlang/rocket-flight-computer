@@ -1,7 +1,7 @@
-#include "main.h"
-
 #ifndef INC_I2C_RECOVER_H_
 #define INC_I2C_RECOVER_H_
+
+#include "main.h"
 
 void I2C_BusClear(I2C_HandleTypeDef *hi2c1);
 

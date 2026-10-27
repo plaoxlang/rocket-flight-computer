@@ -1,8 +1,10 @@
 #include "mpu6050.h"
+#include "i2c_recover.h"
+#include <math.h>
 
 static I2C_HandleTypeDef *mpu_i2c;
 
-MPU6050_Biases MPU_Biases;
+static MPU6050_Biases mpu_biases;
 
 // wake the MPU6050 by clearing the sleep bit
 HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c) {
@@ -13,7 +15,7 @@ HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c) {
 	uint8_t data = 0x00;
 	statusMPU = HAL_I2C_Mem_Write(mpu_i2c, MPU6050_ADDR, MPU6050_PWR_MGMT_1,
 						I2C_MEMADD_SIZE_8BIT, &data,
-						1, HAL_MAX_DELAY);
+						1, MPU6050_I2C_TIMEOUT_MS);
 					
 
 	if(statusMPU != HAL_OK) {
@@ -23,8 +25,8 @@ HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c) {
 	return statusMPU;
 }
 
-static uint16_t combineBytes(uint8_t high, uint8_t low) {
-	return (uint16_t)((high << 8) | low);
+static int16_t combineBytes(uint8_t high, uint8_t low) {
+	return (int16_t)((high << 8) | low);
 }
 
 // read one complete measurement frame from the MPU6050
@@ -34,7 +36,7 @@ HAL_StatusTypeDef MPU6050_ReadRaw(MPU6050_Data *imu) {
 
 	status = HAL_I2C_Mem_Read(mpu_i2c, MPU6050_ADDR, MPU6050_ACCEL_XOUT_H,
 								I2C_MEMADD_SIZE_8BIT, sensor_data, MPU6050_DATA_LENGTH,
-								HAL_MAX_DELAY);
+								MPU6050_I2C_TIMEOUT_MS);
 
 	if(status == HAL_OK) {
 		int16_t accel_x = combineBytes(sensor_data[0], sensor_data[1]);
@@ -68,14 +70,18 @@ HAL_StatusTypeDef MPU6050_Read(MPU6050_Data *imu) {
 	status = MPU6050_ReadRaw(imu);
 
 	if(status == HAL_OK) {
-		imu->gyro_x_dps -= MPU_Biases.gx_bias;
-		imu->gyro_y_dps -= MPU_Biases.gy_bias;
-		imu->gyro_z_dps -= MPU_Biases.gz_bias;
-	} else {
-		I2C_BusClear(mpu_i2c);
+		imu->gyro_x_dps -= mpu_biases.gx_bias;
+		imu->gyro_y_dps -= mpu_biases.gy_bias;
+		imu->gyro_z_dps -= mpu_biases.gz_bias;
 	}
 
 	return status;
+}
+
+static bool MPU6050_IsMoving(const MPU6050_Data *imu) {
+	return fabsf(imu->gyro_x_dps) > MPU6050_CALIB_MOTION_THRESHOLD ||
+			fabsf(imu->gyro_y_dps) > MPU6050_CALIB_MOTION_THRESHOLD ||
+			fabsf(imu->gyro_z_dps) > MPU6050_CALIB_MOTION_THRESHOLD
 }
 
 HAL_StatusTypeDef MPU6050_CalibrateGyro(void) {
@@ -85,44 +91,41 @@ HAL_StatusTypeDef MPU6050_CalibrateGyro(void) {
 	float valuesXSum = 0;
 	float valuesYSum = 0;
 	float valuesZSum = 0;
-	int readErrors = 0;
-	int motionErrors = 0;
+	int read_errors = 0;
+	int motion_errors = 0;
 
-	int i = 0;
-	for(; i < MPU6050_CALIB_READ; i++) {
-		status = MPU6050_ReadRaw(&imu);
+	int valid_samples = 0;
+	while(valid_samples < MPU6050_CALIB_READ) {
+		status = MPU6050_Read(&imu);
 
 		if(status != HAL_OK) {
-			readErrors++;
-			if(readErrors > 9) {
+			if(++read_errors > 9)
 				return HAL_ERROR;
-			}
-			i--;
-		} else if(fabsf(imu.gyro_x_dps) > 3 || fabsf(imu.gyro_y_dps) > 3 || fabsf(imu.gyro_z_dps) > 3) {
-			motionErrors++;
+		}
+
+		if(MPU6050_IsMoving(&imu)) {
+			if(++motion_errors > 9)
+				return HAL_ERROR;
 
 			valuesXSum = 0;
 			valuesYSum = 0;
 			valuesZSum = 0;
-
-			i = -1;
-
-			if(motionErrors > 9) {
-				return HAL_ERROR;
-			}
-		} else {
-			motionErrors = 0;
-			readErrors = 0;
-
-			valuesXSum += imu.gyro_x_dps;
-			valuesYSum += imu.gyro_y_dps;
-			valuesZSum += imu.gyro_z_dps;
+			valid_samples = 0;
 		}
+
+		motion_errors = 0;
+		read_errors = 0;
+
+		valuesXSum += imu.gyro_x_dps;
+		valuesYSum += imu.gyro_y_dps;
+		valuesZSum += imu.gyro_z_dps;
+
+		valid_samples++;
 	}
 
-	MPU_Biases.gx_bias = valuesXSum / MPU6050_CALIB_READ;
-	MPU_Biases.gy_bias = valuesYSum / MPU6050_CALIB_READ;
-	MPU_Biases.gz_bias = valuesZSum / MPU6050_CALIB_READ;
+	mpu_biases.gx_bias = valuesXSum / MPU6050_CALIB_READ;
+	mpu_biases.gy_bias = valuesYSum / MPU6050_CALIB_READ;
+	mpu_biases.gz_bias = valuesZSum / MPU6050_CALIB_READ;
 	return HAL_OK;
 }
 
@@ -132,10 +135,10 @@ HAL_StatusTypeDef MPU6050_ReadWhoAmI(void) {
 
 	MPUIsON = HAL_I2C_Mem_Read(mpu_i2c, MPU6050_ADDR, MPU6050_WHO_AM_I,
 			I2C_MEMADD_SIZE_8BIT, &isConnected, 1,
-			50);
+			MPU6050_I2C_TIMEOUT_MS);
 
 	if(MPUIsON != HAL_OK) return MPUIsON;
-	return (isConnected == 0x68) ? HAL_OK : HAL_ERROR;
+	return (isConnected == MPU6050_WHO_AM_I_VALUE) ? HAL_OK : HAL_ERROR;
 }
 
 HAL_StatusTypeDef MPU6050_Check(void) {

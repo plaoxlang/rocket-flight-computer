@@ -2,9 +2,6 @@
 #define INC_MPU6050_H_
 
 #include "main.h"
-#include "i2c_recover.h"
-#include <stdio.h>
-#include <math.h>
 
 #define MPU6050_ADDR (0x68 << 1)
 #define MPU6050_WHO_AM_I 0x75
@@ -13,6 +10,8 @@
 #define MPU6050_ACCEL_XOUT_H 0x3B
 #define MPU6050_DATA_LENGTH 14
 #define MPU6050_CALIB_READ 1000
+#define MPU6050_CALIB_MOTION_THRESHOLD 3.0f
+#define MPU6050_I2C_TIMEOUT_MS 50
 
 #define MPU6050_ACCEL_SCALE 16384.0f
 #define MPU6050_GYRO_SCALE 131.0f
