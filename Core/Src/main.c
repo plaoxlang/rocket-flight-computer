@@ -65,7 +65,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
-
+static HAL_StatusTypeDef IMU_Recover(HAL_HandleTypeDef *imu);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -108,7 +108,7 @@ int main(void) {
 	MPU6050_Data imu;
 	Attitude attitude;
 	uint32_t fusion_dt_ms; // delay time since last mpu6090 values update and fusion
-	uint32_telemetry_dt_ms; // time interval for telemetry
+	uint32_t telemetry_dt_ms; // time interval for telemetry
 	uint32_t current_time;
 
 	HAL_StatusTypeDef status;
@@ -143,19 +143,16 @@ int main(void) {
 	while (1) {
 		current_time = HAL_GetTick();
 		fusion_dt_ms = current_time - previousFusionTime;
-	telemetry_dt_ms = current_time - previousTelemetryTime;
+		telemetry_dt_ms = current_time - previousTelemetryTime;
 
 		if(fusion_dt_ms >= FUSION_PERIOD) {
 			status = MPU6050_Read(&imu);
 
-			if(status != HAL_OK) {
-				printf("MPU lost, recovering");
-					while(status != HAL_OK) {
-						I2C_BusClear(&hi2c1);
-						MX_I2C1_Init();
-						HAL_Delay(100);
-						status = MPU6050_Read(&imu);
-					}
+			while(status != HAL_OK) {
+				if(!IMU_Recover(&hi2c1)) {
+					continue;
+				}
+				status = MPU6050_Read(&imu);
 			}
 
 			sensorFusion_Update(&imu, fusion_dt_ms, &attitude);
@@ -163,10 +160,10 @@ int main(void) {
 		}
 
 		if(telemetry_dt_ms >= TELEMETRY_PERIOD) {
-			printf("Roll: %.2f\r\n"
-				"Pitch: %.2f\r\n"
-				"dt: %lu\r\n\r\n",
-			attitude.roll_deg, attitude.pitch_deg,telemetry_dt_ms);
+			printf("T: %lu\r\n\r\n"
+				"Roll: %.2f\r\n"
+				"Pitch: %.2f\r\n",
+			current_time, attitude.roll_deg, attitude.pitch_deg);
 
 			previousTelemetryTime += TELEMETRY_PERIOD;
 		}
@@ -320,7 +317,32 @@ static void MX_GPIO_Init(void) {
 }
 
 /* USER CODE BEGIN 4 */
+/**
+ * @brief This function is executed in cas of error occurence in communitcation with the MPU6050 module
+ * @param hi2c1 I2C Handler
+ * @retval Status of the communication with the MPU module(if the i2c bus is clear,
+ * 			if the MPU responds when trying to communicate with it, if the correct module is connected)
+ */
+static HAL_StatusTypeDef IMU_Recover(I2c_HandleTypeDef *hi2c1) {
+	HAL_StatusTypeDef status;
 
+	status = I2C_BusClear(hi2c1);
+	if(status != HAL_OK) {
+		return HAL_ERROR;
+	}
+
+	status = MPU6050_Check();
+	if(status != HAL_OK) {
+		return HAL_ERROR;
+	}
+
+	status = MPU6050_ReadWhoAmI();
+	if(status != HAL_OK) {
+		return HAL_ERROR;
+	}
+
+	return HAL_OK;
+}
 /* USER CODE END 4 */
 
 /**

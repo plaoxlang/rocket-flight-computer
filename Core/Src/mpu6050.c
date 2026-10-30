@@ -1,5 +1,4 @@
 #include "mpu6050.h"
-#include "i2c_recover.h"
 #include <math.h>
 
 static I2C_HandleTypeDef *mpu_i2c;

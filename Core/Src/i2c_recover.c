@@ -38,5 +38,12 @@ HAL_StatusTypeDef I2C_BusClear(I2C_HandleTypeDef *hi2c1)
     HAL_GPIO_WritePin(I2C_SDA_PORT, I2C_SDA_PIN, GPIO_PIN_SET);
     HAL_Delay(1);
 
+    if (HAL_GPIO_ReadPin(SDA_PORT, SDA_PIN) != GPIO_PIN_SET) {
+        return HAL_ERROR;
+    }
+    if (HAL_GPIO_ReadPin(SCL_PORT, SCL_PIN) != GPIO_PIN_SET) {
+        return HAL_ERROR;
+    }
+
     return HAL_OK;
 }

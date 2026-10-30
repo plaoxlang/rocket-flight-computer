@@ -7,9 +7,9 @@ void sensorFusion_Init(const MPU6050_Data *imu, Attitude *attitude) {
 }
 
 void sensorFusion_Update(const MPU6050_Data *imu,
-		uint32_t dt, Attitude *attitude)
+		uint32_t dt_ms, Attitude *attitude)
 {
-	float dt_sec = (float)dt / SEC_IN_MILISEC;
+	float dt_sec = (float)dt_ms / SEC_IN_MILISEC;
 	float gyro_roll_deg = attitude->roll_deg + imu->gyro_x_dps * dt_sec;
 	float gyro_pitch_deg = attitude->pitch_deg + imu->gyro_y_dps * dt_sec;
 
