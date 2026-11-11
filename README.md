@@ -104,7 +104,29 @@ serial terminal.
 
 ## Build and Flash
 
+**Requirements**
 
+* STM32F446RE board
+* STM32CubeIDE
+* STM32CubeMX
+* MPU6050 module
+
+**Instructions**
+
+1. Copy this repository
+2. Open the project in STM32CubeIDE
+3. Connect the NUCLEO-F446RE board through ST-LINK
+4. Build the project
+5. Flash the firmware onto the microcontroller
+6. Open a serial terminal connected to USART2 at 115200 baud.
+
+The system should initialize the MPU6050, perform gyroscope calibration, and start transmitting telemetry.
 
 ## Future Improvements
 
+* Improving error handling and recovery policies.
+* Adding automated tests for sensor processing algorithms.
+* Logging and visualizing telemetry data.
+* Integrating a barometric pressure sensor for altitude estimation.
+* Evaluating more advanced attitude estimation algorithms.
+* Investigating real-time scheduling and interrupt-driven acquisition.
