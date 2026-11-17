@@ -29,6 +29,7 @@ typedef struct
     float gyro_z_dps;
 
     float temperature_c;
+
 } MPU6050_Data;
 
 typedef struct
@@ -36,14 +37,38 @@ typedef struct
 	float gx_bias;
 	float gy_bias;
 	float gz_bias;
+
 } MPU6050_Biases;
 
-HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c);
+typedef struct
+{
+    const char* name;
+    const char* instance;
 
-HAL_StatusTypeDef MPU6050_Read(MPU6050_Data *imu);
+    uint8_t i2c_address;
+    uint8_t who_am_i;
+    uint8_t status;
 
-HAL_StatusTypeDef MPU6050_CalibrateGyro(void);
+} MPU6050_Info;
 
-HAL_StatusTypeDef MPU6050_Check(void);
+typedef struct
+{
+    MPU6050_Info info;
+    MPU6050_Data data;
+    MPU6050_Biases biases;
+
+    I2C_HandleTypeDef *i2c;
+
+} MPU6050;
+
+HAL_StatusTypeDef MPU6050_Init(MPU6050 *imu);
+
+HAL_StatusTypeDef MPU6050_ReadRaw(MPU6050 *imu);
+HAL_StatusTypeDef MPU6050_Read(MPU6050 *imu);
+
+HAL_StatusTypeDef MPU6050_CalibrateGyro(MPU6050 *imu);
+
+HAL_StatusTypeDef MPU6050_ReadWhoAmI(MPU6050 *imu);
+HAL_StatusTypeDef MPU6050_Check(MPU6050 *imu);
 
 #endif

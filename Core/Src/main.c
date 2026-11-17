@@ -23,6 +23,8 @@
 #include <math.h>
 #include "mpu6050.h"
 #include "sensor_fusion.h"
+#include <stdbool.h>
+#include "imu_connection_test.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -65,7 +67,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
-static HAL_StatusTypeDef IMU_Recover(HAL_HandleTypeDef *imu);
+static HAL_StatusTypeDef IMU_Recover(MPU6050 *imu);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -105,26 +107,34 @@ int main(void) {
 
 	HAL_Delay(100); // Give the MPU6050 time to power up and become ready before communicating with it.
 
-	MPU6050_Data imu;
+	MPU6050 imu = {
+		.info = {
+			.name = "MPU6050",
+			.instance = "IMU_01",
+			.i2c_address = MPU6050_WHO_AM_I_VALUE
+		},
+		.i2c = &hi2c1
+	};
+
 	Attitude attitude;
 	uint32_t fusion_dt_ms; // delay time since last mpu6090 values update and fusion
 	uint32_t telemetry_dt_ms; // time interval for telemetry
 	uint32_t current_time;
 
 	HAL_StatusTypeDef status;
-	status = MPU6050_Init(&hi2c1);
+	status = MPU6050_Init(&imu);
 	while(status != HAL_OK) {
 		I2C_BusClear(&hi2c1);
 		MX_I2C1_Init();
 		printf("MPU initialization failed, retrying\r\n");
-		status = MPU6050_Init(&hi2c1);
+		status = MPU6050_Init(&imu);
 	}
 
-	status = MPU6050_CalibrateGyro();
+	status = MPU6050_CalibrateGyro(&imu);
 	while(status != HAL_OK) {
 		printf("MPU calibration failed, retrying after 300ms\r\n");
 		HAL_Delay(300);
-		status = MPU6050_CalibrateGyro();
+		status = MPU6050_CalibrateGyro(&imu);
 	}
 
 	// first read for the sensor
@@ -134,10 +144,12 @@ int main(void) {
 		status = MPU6050_Read(&imu);
 	}
 
-	sensorFusion_Init(&imu, &attitude);
+	sensorFusion_Init(&imu.data, &attitude);
 
 	uint32_t previousFusionTime = 0;
 	uint32_t previousTelemetryTime = 0;
+
+	test_IMU_Identification(&imu);
 
 	//main loop
 	while (1) {
@@ -149,13 +161,13 @@ int main(void) {
 			status = MPU6050_Read(&imu);
 
 			while(status != HAL_OK) {
-				if(!IMU_Recover(&hi2c1)) {
+				if(!IMU_Recover(&imu)) {
 					continue;
 				}
 				status = MPU6050_Read(&imu);
 			}
 
-			sensorFusion_Update(&imu, fusion_dt_ms, &attitude);
+			sensorFusion_Update(&imu.data, fusion_dt_ms, &attitude);
 			previousFusionTime += FUSION_PERIOD;
 		}
 
@@ -323,20 +335,20 @@ static void MX_GPIO_Init(void) {
  * @retval Status of the communication with the MPU module(if the i2c bus is clear,
  * 			if the MPU responds when trying to communicate with it, if the correct module is connected)
  */
-static HAL_StatusTypeDef IMU_Recover(I2c_HandleTypeDef *hi2c1) {
+static HAL_StatusTypeDef IMU_Recover(MPU6050 *imu) {
 	HAL_StatusTypeDef status;
 
-	status = I2C_BusClear(hi2c1);
+	status = I2C_BusClear(imu->i2c);
 	if(status != HAL_OK) {
 		return HAL_ERROR;
 	}
 
-	status = MPU6050_Check();
+	status = MPU6050_Check(imu);
 	if(status != HAL_OK) {
 		return HAL_ERROR;
 	}
 
-	status = MPU6050_ReadWhoAmI();
+	status = MPU6050_ReadWhoAmI(imu);
 	if(status != HAL_OK) {
 		return HAL_ERROR;
 	}
