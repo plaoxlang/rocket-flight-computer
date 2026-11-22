@@ -1,4 +1,4 @@
-#include <i2c_recover.h>
+#include "i2c_recover.h"
 
 #define I2C_SCL_PORT GPIOB
 #define I2C_SCL_PIN  GPIO_PIN_8
