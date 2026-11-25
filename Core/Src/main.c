@@ -25,6 +25,7 @@
 #include "sensor_fusion.h"
 #include <stdbool.h>
 #include "imu_connection_test.h"
+#include "config_test.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -129,6 +130,8 @@ int main(void) {
 		printf("MPU initialization failed, retrying\r\n");
 		status = MPU6050_Init(&imu);
 	}
+
+	MPU6050_CheckInitialization(&imu);
 
 	status = MPU6050_CalibrateGyro(&imu);
 	while(status != HAL_OK) {

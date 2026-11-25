@@ -25,7 +25,7 @@ void test_IMU_Identification(MPU6050 *imu) {
 
 	printf("\r\n-----IMU IDENTIFICATION-----\r\n");
 
-	printf("Device: ");
+	printf("Device: %s\r\n", imu->info.instance);
 
 	printf("Total attempts: %d\r\n", TEST_ITERATIONS);
 	printf("Successful: %lu\r\n", successful_reads);
